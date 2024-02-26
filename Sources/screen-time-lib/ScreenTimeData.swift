@@ -1,4 +1,4 @@
-struct ScreenTimeData: Hashable, Codable {
-    var available = 0
-    var used = 0
+public struct ScreenTimeData: Hashable, Codable {
+    public var available = 0
+    public var used = 0
 }
