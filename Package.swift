@@ -8,12 +8,12 @@ let package = Package(
     products: [
         .library(
             name: "screen-time-lib",
-            targets: ["screen-time-lib"]
+            targets: ["screentime"]
         ),
     ],
     targets: [
         .target(
-            name: "screen-time-lib"
+            name: "screentime"
         )
     ]
 )
