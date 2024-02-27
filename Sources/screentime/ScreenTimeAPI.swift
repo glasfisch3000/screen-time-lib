@@ -1,22 +1,22 @@
 import Vapor
 import Crypto
 
-struct ScreenTimeAPI {
-    typealias PrivateKey = Curve25519.Signing.PrivateKey
-    typealias PublicKey = Curve25519.Signing.PublicKey
+public struct ScreenTimeAPI {
+    public typealias PrivateKey = Curve25519.Signing.PrivateKey
+    public typealias PublicKey = Curve25519.Signing.PublicKey
     
-    struct KeySet<Key> {
-        var admin: Key
-        var users: [Key]
-        var viewers: [Key]
+    public struct KeySet<Key> {
+        public var admin: Key
+        public var users: [Key]
+        public var viewers: [Key]
         
-        init(admin: Key, users: [Key], viewers: [Key]) {
+        public init(admin: Key, users: [Key], viewers: [Key]) {
             self.admin = admin
             self.users = users
             self.viewers = viewers
         }
         
-        func map<Result>(_ transform: @escaping (Key) throws -> Result) rethrows -> KeySet<Result> {
+        public func map<Result>(_ transform: @escaping (Key) throws -> Result) rethrows -> KeySet<Result> {
             KeySet<Result>(
                 admin: try transform(self.admin),
                 users: try self.users.map(transform),
@@ -25,22 +25,22 @@ struct ScreenTimeAPI {
         }
     }
     
-    struct SignatureData: Codable {
-        var timestamp: TimeInterval
-        var signature: Data
+    public struct SignatureData: Codable {
+        public var timestamp: TimeInterval
+        public var signature: Data
     }
     
-    enum APIError: Error {
+    public enum APIError: Error {
         case unableToEncode
         case unableToSign
         case invalidResponse
         case invalidResponseStatus(_ status: HTTPResponseStatus)
     }
     
-    var scheme: String
-    var host: String
+    public var scheme: String
+    public var host: String
     
-    func loadScreenTime(id: String, year: Int, day: Int, keys: KeySet<PrivateKey>) async throws -> ScreenTimeData {
+    public func loadScreenTime(id: String, year: Int, day: Int, keys: KeySet<PrivateKey>) async throws -> ScreenTimeData {
         let response = try await sendRequest(.GET, "time", id, year.description, day.description, key: keys.admin)
         guard let response = response else { throw APIError.invalidResponse }
         
@@ -48,12 +48,12 @@ struct ScreenTimeAPI {
         return screenTime
     }
     
-    func putScreenTime(_ screenTime: ScreenTimeData, id: String, year: Int, day: Int, keys: KeySet<PrivateKey>) async throws {
+    public func putScreenTime(_ screenTime: ScreenTimeData, id: String, year: Int, day: Int, keys: KeySet<PrivateKey>) async throws {
         let body = try JSONEncoder().encode(screenTime)
         try await sendRequest(.PUT, "time", id, year.description, day.description, body: body, key: keys.admin)
     }
     
-    func uploadKeys(id: String, keys: KeySet<PrivateKey>, master: PrivateKey) async throws {
+    public func uploadKeys(id: String, keys: KeySet<PrivateKey>, master: PrivateKey) async throws {
         let publicKeys = keys.map(\.publicKey)
         let body = try JSONEncoder().encode(publicKeys)
         
