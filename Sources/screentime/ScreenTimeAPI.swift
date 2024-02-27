@@ -65,20 +65,6 @@ public struct ScreenTimeAPI {
         try await sendRequest(.PUT, "keys", id, body: body, key: master)
     }
     
-    public func createSignature(_ components: [String], body: Data?, key: PrivateKey) throws -> SignatureData {
-        let timestamp = Date().timeIntervalSince1970
-        
-        let newComponents = components + [timestamp.description]
-        let componentsString = newComponents.joined(separator: ":")
-        
-        guard var dataToSign = componentsString.data(using: .utf8) else { throw APIError.unableToSign }
-        
-        if let body = body { dataToSign += body }
-        
-        let signature = try key.signature(for: dataToSign)
-        return SignatureData(timestamp: timestamp, signature: signature)
-    }
-    
     @discardableResult
     public func sendRequest(_ method: HTTPMethod, _ components: String..., body: Data? = nil, key: PrivateKey) async throws -> ByteBuffer? {
         var encodedComponents: [String] = []
@@ -89,7 +75,7 @@ public struct ScreenTimeAPI {
             encodedComponents.append(encoded)
         }
         
-        let signature = try createSignature([method.rawValue] + components, body: body, key: key)
+        let signature = try Self.createSignature([method.rawValue] + components, body: body, key: key)
         let signatureString = try URLEncodedFormEncoder().encode(signature)
         
         let url = "\(self.scheme)://\(self.host)/\(encodedComponents.joined(separator: "/"))?\(signatureString)"
@@ -108,6 +94,20 @@ public struct ScreenTimeAPI {
         guard response.status == .ok else { throw APIError.invalidResponseStatus(response.status) }
         
         return response.body
+    }
+    
+    public static func createSignature(_ components: [String], body: Data?, key: PrivateKey) throws -> SignatureData {
+        let timestamp = Date().timeIntervalSince1970
+        
+        let newComponents = components + [timestamp.description]
+        let componentsString = newComponents.joined(separator: ":")
+        
+        guard var dataToSign = componentsString.data(using: .utf8) else { throw APIError.unableToSign }
+        
+        if let body = body { dataToSign += body }
+        
+        let signature = try key.signature(for: dataToSign)
+        return SignatureData(timestamp: timestamp, signature: signature)
     }
 }
 
