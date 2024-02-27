@@ -109,6 +109,29 @@ public struct ScreenTimeAPI {
         let signature = try key.signature(for: dataToSign)
         return SignatureData(timestamp: timestamp, signature: signature)
     }
+    
+    public enum SignatureVerificationResult {
+        case valid
+        case invalid
+        case outdated
+    }
+    
+    public static func verifySignature(_ components: [String], body: Data?, signature: SignatureData, keys: [PublicKey]) throws -> SignatureVerificationResult {
+        guard (0...2).contains(Date().timeIntervalSince1970 - signature.timestamp) else { return .outdated }
+        
+        let newComponents = components + [signature.timestamp.description]
+        let componentsString = newComponents.joined(separator: ":")
+        
+        guard var dataToSign = componentsString.data(using: .utf8) else { throw APIError.unableToSign }
+        
+        if let body = body { dataToSign += body }
+        
+        for key in keys {
+            if key.isValidSignature(signature.signature, for: dataToSign) { return .valid }
+        }
+        
+        return .invalid
+    }
 }
 
 extension ScreenTimeAPI.PrivateKey: RawRepresentable {
