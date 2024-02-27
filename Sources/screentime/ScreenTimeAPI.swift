@@ -40,6 +40,11 @@ public struct ScreenTimeAPI {
     public var scheme: String
     public var host: String
     
+    public init(scheme: String, host: String) {
+        self.scheme = scheme
+        self.host = host
+    }
+    
     public func loadScreenTime(id: String, year: Int, day: Int, keys: KeySet<PrivateKey>) async throws -> ScreenTimeData {
         let response = try await sendRequest(.GET, "time", id, year.description, day.description, key: keys.admin)
         guard let response = response else { throw APIError.invalidResponse }
