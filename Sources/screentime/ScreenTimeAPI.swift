@@ -62,10 +62,7 @@ public struct ScreenTimeAPI {
         let publicKeys = keys.map(\.publicKey)
         let body = try JSONEncoder().encode(publicKeys)
         
-        guard let masterKeyString = UserDefaults.standard.string(forKey: "master-key") else { throw APIError.unableToSign }
-        guard let masterKey = PrivateKey(rawValue: masterKeyString) else { throw APIError.unableToSign }
-        
-        try await sendRequest(.PUT, "keys", id, body: body, key: masterKey)
+        try await sendRequest(.PUT, "keys", id, body: body, key: master)
     }
     
     public func createSignature(_ components: [String], body: Data?, key: PrivateKey) throws -> SignatureData {
