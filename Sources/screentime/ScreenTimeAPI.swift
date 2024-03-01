@@ -45,17 +45,17 @@ public struct ScreenTimeAPI {
         self.host = host
     }
     
-    public func loadScreenTime(id: String, year: Int, day: Int, keys: KeySet<PrivateKey>) async throws -> ScreenTimeData {
-        let response = try await sendRequest(.GET, "time", id, year.description, day.description, key: keys.admin)
+    public func loadScreenTime(id: String, year: Int, day: Int, key: PrivateKey) async throws -> ScreenTimeData {
+        let response = try await sendRequest(.GET, "time", id, year.description, day.description, key: key)
         guard let response = response else { throw APIError.invalidResponse }
         
         let screenTime = try JSONDecoder().decode(ScreenTimeData.self, from: response)
         return screenTime
     }
     
-    public func putScreenTime(_ screenTime: ScreenTimeData, id: String, year: Int, day: Int, keys: KeySet<PrivateKey>) async throws {
+    public func putScreenTime(_ screenTime: ScreenTimeData, id: String, year: Int, day: Int, key: PrivateKey) async throws {
         let body = try JSONEncoder().encode(screenTime)
-        try await sendRequest(.PUT, "time", id, year.description, day.description, body: body, key: keys.admin)
+        try await sendRequest(.PUT, "time", id, year.description, day.description, body: body, key: key)
     }
     
     public func uploadKeys(id: String, keys: KeySet<PrivateKey>, master: PrivateKey) async throws {
