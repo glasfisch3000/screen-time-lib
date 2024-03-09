@@ -37,48 +37,12 @@ public struct ScreenTimeAPI {
         case invalidResponseStatus(_ status: HTTPResponseStatus)
     }
     
-    public enum KeyType: String {
-        case admin
-        case user
-        case viewer
-        case none
-    }
-    
     public var scheme: String
     public var host: String
     
     public init(scheme: String, host: String) {
         self.scheme = scheme
         self.host = host
-    }
-    
-    public func loadScreenTime(id: String, year: Int, day: Int, key: PrivateKey) async throws -> ScreenTimeData {
-        let response = try await sendSignedRequest(.GET, "time", id, year.description, day.description, key: key)
-        guard let response = response else { throw APIError.invalidResponse }
-        
-        let screenTime = try JSONDecoder().decode(ScreenTimeData.self, from: response)
-        return screenTime
-    }
-    
-    public func putScreenTime(_ screenTime: ScreenTimeData, id: String, year: Int, day: Int, key: PrivateKey) async throws {
-        let body = try JSONEncoder().encode(screenTime)
-        try await sendSignedRequest(.PUT, "time", id, year.description, day.description, body: body, key: key)
-    }
-    
-    public func uploadKeys(id: String, keys: KeySet<PrivateKey>, master: PrivateKey) async throws {
-        let publicKeys = keys.map(\.publicKey)
-        let body = try JSONEncoder().encode(publicKeys)
-        
-        try await sendSignedRequest(.PUT, "keys", id, body: body, key: master)
-    }
-    
-    public func checkKey(id: String, key: PublicKey) async throws -> KeyType? {
-        let body = try JSONEncoder().encode(key)
-        
-        guard let response = try await sendRequest(.GET, "key", id, body: body) else { return nil }
-        guard let responseData = response.getData(at: response.readerIndex, length: response.readableBytes) else { return nil }
-        guard let responseString = String(data: responseData, encoding: .utf8) else { return nil }
-        return .init(rawValue: responseString)
     }
     
     @discardableResult
