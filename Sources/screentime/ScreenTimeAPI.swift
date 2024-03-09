@@ -37,6 +37,13 @@ public struct ScreenTimeAPI {
         case invalidResponseStatus(_ status: HTTPResponseStatus)
     }
     
+    public enum KeyType: String {
+        case admin
+        case user
+        case viewer
+        case none
+    }
+    
     public var scheme: String
     public var host: String
     
@@ -46,7 +53,7 @@ public struct ScreenTimeAPI {
     }
     
     public func loadScreenTime(id: String, year: Int, day: Int, key: PrivateKey) async throws -> ScreenTimeData {
-        let response = try await sendRequest(.GET, "time", id, year.description, day.description, key: key)
+        let response = try await sendSignedRequest(.GET, "time", id, year.description, day.description, key: key)
         guard let response = response else { throw APIError.invalidResponse }
         
         let screenTime = try JSONDecoder().decode(ScreenTimeData.self, from: response)
@@ -55,18 +62,55 @@ public struct ScreenTimeAPI {
     
     public func putScreenTime(_ screenTime: ScreenTimeData, id: String, year: Int, day: Int, key: PrivateKey) async throws {
         let body = try JSONEncoder().encode(screenTime)
-        try await sendRequest(.PUT, "time", id, year.description, day.description, body: body, key: key)
+        try await sendSignedRequest(.PUT, "time", id, year.description, day.description, body: body, key: key)
     }
     
     public func uploadKeys(id: String, keys: KeySet<PrivateKey>, master: PrivateKey) async throws {
         let publicKeys = keys.map(\.publicKey)
         let body = try JSONEncoder().encode(publicKeys)
         
-        try await sendRequest(.PUT, "keys", id, body: body, key: master)
+        try await sendSignedRequest(.PUT, "keys", id, body: body, key: master)
+    }
+    
+    public func checkKey(id: String, key: PublicKey) async throws -> KeyType? {
+        let body = try JSONEncoder().encode(key)
+        
+        guard let response = try await sendRequest(.GET, "key", id, body: body) else { return nil }
+        guard let responseData = response.getData(at: response.readerIndex, length: response.readableBytes) else { return nil }
+        guard let responseString = String(data: responseData, encoding: .utf8) else { return nil }
+        return .init(rawValue: responseString)
     }
     
     @discardableResult
-    public func sendRequest(_ method: HTTPMethod, _ components: String..., body: Data? = nil, key: PrivateKey) async throws -> ByteBuffer? {
+    public func sendRequest(_ method: HTTPMethod, _ components: String..., body: Data? = nil) async throws -> ByteBuffer? {
+        var encodedComponents: [String] = []
+        for component in components {
+            let encoded = component.addingPercentEncoding(withAllowedCharacters: .urlFragmentAllowed)
+            guard let encoded = encoded else { throw APIError.unableToEncode }
+            
+            encodedComponents.append(encoded)
+        }
+        
+        let url = "\(self.scheme)://\(self.host)/\(encodedComponents.joined(separator: "/"))"
+        
+        let requestBody: HTTPClient.Body?
+        if let body = body {
+            requestBody = .data(body)
+        } else {
+            requestBody = nil
+        }
+        
+        let client = AsyncHTTPClient.HTTPClient()
+        defer { Task { try? await client.shutdown().get() } }
+        
+        let response = try await client.execute(method, url: url, body: requestBody).get()
+        guard response.status == .ok else { throw APIError.invalidResponseStatus(response.status) }
+        
+        return response.body
+    }
+    
+    @discardableResult
+    public func sendSignedRequest(_ method: HTTPMethod, _ components: String..., body: Data? = nil, key: PrivateKey) async throws -> ByteBuffer? {
         var encodedComponents: [String] = []
         for component in components {
             let encoded = component.addingPercentEncoding(withAllowedCharacters: .urlFragmentAllowed)
