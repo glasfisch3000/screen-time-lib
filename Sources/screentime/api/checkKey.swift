@@ -2,6 +2,7 @@ import Foundation
 
 extension ScreenTimeAPI {
     public enum KeyType: String {
+        case master
         case admin
         case user
         case viewer
